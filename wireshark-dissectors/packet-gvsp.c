@@ -456,7 +456,9 @@ static int ett_gvsp_gendc_payload_flow_flags = -1;
 static int ett_gvsp_gendc_container_descriptor = -1;
 static int ett_gvsp_gendc_container_header_flags = -1;
 static int ett_gvsp_gendc_container_header_variable_fields = -1;
+static int ett_gvsp_gendc_container_header_component_offsets = -1;
 static int ett_gvsp_gendc_component_header = -1;
+static int ett_gvsp_gendc_part_offsets = -1;
 static int ett_gvsp_gendc_part_header = -1;
 static int ett_gvsp_gendc_component_header_flags = -1;
 
@@ -1023,25 +1025,26 @@ static int hf_gvsp_gendc_component_header_source_id_v2_2 = -1;
 static int hf_gvsp_gendc_component_header_region_id_v2_2 = -1;
 static int hf_gvsp_gendc_component_header_type_id_v2_2 = -1;
 static int hf_gvsp_gendc_component_header_part_count_v2_2 = -1;
+static int hf_gvsp_gendc_component_header_part_offset_v2_2 = -1;
 static int hf_gvsp_gendc_part_header_flow_offset_v2_2 = -1;
 static int hf_gvsp_gendc_part_header_type_specific_info_v2_2 = -1;
 static int hf_gvsp_gendc_part_header_1D_size_v2_2 = -1;
 static int hf_gvsp_gendc_part_header_1D_padding_v2_2 = -1;
 
-static const int *pixelformat_fields[] = {
+static int * const pixelformat_fields[] = {
     &hf_gvsp_pixelcolor,
     &hf_gvsp_pixeloccupy,
     &hf_gvsp_pixelid,
     NULL
 };
 
-static const int *fieldinfo_fields[] = {
+static int * const fieldinfo_fields[] = {
     &hf_gvsp_fieldid,
     &hf_gvsp_fieldcount,
     NULL
 };
 
-static const int *cs_fields[] = {
+static int * const cs_fields[] = {
     &hf_gvsp_cs0,
     &hf_gvsp_cs1,
     &hf_gvsp_cs2,
@@ -1049,7 +1052,7 @@ static const int *cs_fields[] = {
     NULL
 };
 
-static const int *sc_zone_direction_fields[] = {
+static int * const sc_zone_direction_fields[] = {
     &hf_gvsp_sc_zone0_direction,
     &hf_gvsp_sc_zone1_direction,
     &hf_gvsp_sc_zone2_direction,
@@ -1085,20 +1088,20 @@ static const int *sc_zone_direction_fields[] = {
     NULL
 };
 
-static const int *zoneinfo_fields[] = {
+static int * const zoneinfo_fields[] = {
     &hf_gvsp_zoneid,
     &hf_gvsp_endofzone,
     NULL
 };
 
-static const int *zoneinfo_multipart_fields[] = {
+static int * const zoneinfo_multipart_fields[] = {
     &hf_gvsp_endofpart,
     &hf_gvsp_zoneid,
     &hf_gvsp_endofzone,
     NULL
 };
 
-static const int *flags_fields[] = {
+static int * const flags_fields[] = {
     &hf_gvsp_flagdevicespecific0,
     &hf_gvsp_flagdevicespecific1,
     &hf_gvsp_flagdevicespecific2,
@@ -1113,13 +1116,13 @@ static const int *flags_fields[] = {
     NULL
 };
 
-static const int *gendc_leader_flags_fields[] = {
+static int * const gendc_leader_flags_fields[] = {
     &hf_gvsp_gendc_leader_flags_reserved_v2_2,
     &hf_gvsp_gendc_leader_flags_preliminary_descriptor_v2_2,
     NULL
 };
 
-static const int *gendc_payload_data_flags_fields[] = {
+static int * const gendc_payload_data_flags_fields[] = {
     &hf_gvsp_gendc_payload_data_flag_descriptor_flags_v2_2,
     &hf_gvsp_gendc_payload_data_flag_start_of_descriptor_data_v2_2,
     &hf_gvsp_gendc_payload_data_flag_end_of_descriptor_data_v2_2,
@@ -1127,20 +1130,20 @@ static const int *gendc_payload_data_flags_fields[] = {
     NULL
 };
 
-static const int *gendc_payload_flow_flags_fields[] = {
+static int * const gendc_payload_flow_flags_fields[] = {
     &hf_gvsp_gendc_payload_flow_flag_first_packet_v2_2,
     &hf_gvsp_gendc_payload_flow_flag_last_packet_v2_2,
     NULL
 };
 
-static const int *gendc_container_header_flags_fields[] = {
+static int * const gendc_container_header_flags_fields[] = {
     &hf_gvsp_gendc_container_header_flags_timestamp_ptp_v2_2,
     &hf_gvsp_gendc_container_header_flags_component_invalid_v2_2,
     &hf_gvsp_gendc_container_header_flags_reserved_v2_2,
     NULL
 };
 
-static const int *gendc_container_header_variable_fields_fields[] = {
+static int * const gendc_container_header_variable_fields_fields[] = {
     &hf_gvsp_gendc_container_header_variable_fields_data_size_v2_2,
     &hf_gvsp_gendc_container_header_variable_fields_size_x_v2_2,
     &hf_gvsp_gendc_container_header_variable_fields_size_y_v2_2,
@@ -1153,7 +1156,7 @@ static const int *gendc_container_header_variable_fields_fields[] = {
     NULL
 };
 
-static const int *gendc_component_header_flags_fields[] = {
+static int * const gendc_component_header_flags_fields[] = {
     &hf_gvsp_gendc_component_header_flags_invalid_v2_2,
     &hf_gvsp_gendc_component_header_flags_reserved_v2_2,
     NULL
@@ -1836,6 +1839,7 @@ static void dissect_packet_payload_gendc(proto_tree *gvsp_tree, tvbuff_t *tvb, p
         {
             const guint32 component_count = tvb_get_guint32(tvb, offset + 68, ENC_LITTLE_ENDIAN);
             proto_tree* gvsp_gendc_container_descriptor_tree = proto_tree_add_subtree(gvsp_tree, tvb, offset + 16, -1, ett_gvsp_gendc_container_descriptor, NULL, "GenDC Container Descriptor");
+            proto_tree* gvsp_gendc_container_header_component_offsets_tree = 0;
 
             /* GenDC container header signature */
             proto_tree_add_item(gvsp_gendc_container_descriptor_tree, hf_gvsp_gendc_container_header_signature_v2_2, tvb, offset + 16, 4, ENC_ASCII|ENC_NA);
@@ -1878,15 +1882,18 @@ static void dissect_packet_payload_gendc(proto_tree *gvsp_tree, tvbuff_t *tvb, p
             /* GenDC container header component count */
             proto_tree_add_item(gvsp_gendc_container_descriptor_tree, hf_gvsp_gendc_container_header_component_count_v2_2, tvb, offset + 68, 4, ENC_LITTLE_ENDIAN);
 
+            gvsp_gendc_container_header_component_offsets_tree = proto_tree_add_subtree(gvsp_gendc_container_descriptor_tree, tvb, offset + 72, 8 * component_count, ett_gvsp_gendc_container_header_component_offsets, NULL, "Component Offsets");
+
             for (guint32 i = 0; i < component_count; i++)
             {
                 guint component_offset = offset + 16 + (gint)tvb_get_guint64(tvb, offset + 72 + 8 * i, ENC_LITTLE_ENDIAN);
                 guint16 part_count = tvb_get_guint16(tvb, component_offset + 46, ENC_LITTLE_ENDIAN);
 
                 proto_tree* gvsp_gendc_component_header_tree = proto_tree_add_subtree(gvsp_gendc_container_descriptor_tree, tvb, offset + 16 + component_offset, -1, ett_gvsp_gendc_component_header, NULL, "Component Header");
+                proto_tree* gvsp_gendc_component_header_part_offsets_tree = 0;
 
                 /* GenDC container header component offset */
-                proto_tree_add_item(gvsp_gendc_component_header_tree, hf_gvsp_gendc_container_header_component_offset_v2_2, tvb, offset + 72 + 8 * i, 8, ENC_LITTLE_ENDIAN);
+                proto_tree_add_item(gvsp_gendc_container_header_component_offsets_tree, hf_gvsp_gendc_container_header_component_offset_v2_2, tvb, offset + 72 + 8 * i, 8, ENC_LITTLE_ENDIAN);
 
                 /* component layout (size:offset)
                     2 :  0 type
@@ -1943,12 +1950,17 @@ static void dissect_packet_payload_gendc(proto_tree *gvsp_tree, tvbuff_t *tvb, p
                 /* GenDC component header part count */
                 proto_tree_add_item(gvsp_gendc_component_header_tree, hf_gvsp_gendc_component_header_part_count_v2_2, tvb, component_offset + 46, 2, ENC_LITTLE_ENDIAN);
 
+                gvsp_gendc_component_header_part_offsets_tree = proto_tree_add_subtree(gvsp_gendc_component_header_tree, tvb, component_offset + 48, 8 * part_count, ett_gvsp_gendc_part_offsets, NULL, "Part Offsets");
+
                 for (guint16 j = 0; j < part_count; j++)
                 {
                     guint part_offset = offset + 16 + (gint)tvb_get_guint64(tvb, component_offset + 48 + 8 * j, ENC_LITTLE_ENDIAN);
                     guint16 part_type = tvb_get_guint16(tvb, part_offset, ENC_LITTLE_ENDIAN);
 
                     proto_tree* gvsp_gendc_part_header_tree = proto_tree_add_subtree(gvsp_gendc_component_header_tree, tvb, offset + 16 + part_offset, -1, ett_gvsp_gendc_part_header, NULL, "Part Header");
+
+                    /* GenDC component header part offset */
+                    proto_tree_add_item(gvsp_gendc_component_header_part_offsets_tree, hf_gvsp_gendc_component_header_part_offset_v2_2, tvb, component_offset + 48 + 8 * j, 8, ENC_LITTLE_ENDIAN);
 
                     /* common part layout (size:offset)
                         2:0 type
@@ -2117,7 +2129,7 @@ static void dissect_packet_all_in(proto_tree *gvsp_tree, tvbuff_t *tvb, gint off
     /* Therefore, it is not possible to use all-in transmission mode for the multi-part payload type. */
 
     /* case GVSP_PAYLOAD_GENDC: */
-    /* By definition, GenDC cannot support the all-in packet since it requires at least one data containing the GenDC descriptor. */
+    /* By definition, GenDC cannot support the all-in packet since it requires at least one data packet containing the GenDC descriptor. */
     /* Therefore, it is not possible to use all-in transmission mode for the GenDC payload type. */
 
     }
@@ -3130,7 +3142,7 @@ void proto_register_gvsp(void)
 
         { &hf_gvsp_gendc_payload_data_size_v2_2,
         { "Data Size", "gvsp.gendc.payload.datasize",
-        FT_UINT64, BASE_HEX_DEC, NULL, 0x0,
+        FT_UINT32, BASE_HEX_DEC, NULL, 0x0,
         NULL, HFILL
         } },
 
@@ -3398,6 +3410,12 @@ void proto_register_gvsp(void)
         NULL, HFILL
         } },
 
+        { &hf_gvsp_gendc_component_header_part_offset_v2_2,
+        { "Part Offset", "gvsp.gendc.container.header.partoffset",
+        FT_UINT64, BASE_HEX_DEC, NULL, 0x0,
+        NULL, HFILL
+        } },
+
         { &hf_gvsp_gendc_part_header_flow_offset_v2_2,
         { "Flow Offset", "gvsp.gendc.part.header.flowoffset",
         FT_UINT64, BASE_HEX_DEC, NULL, 0x0,
@@ -3443,8 +3461,10 @@ void proto_register_gvsp(void)
         &ett_gvsp_gendc_container_descriptor,
         &ett_gvsp_gendc_container_header_flags,
         &ett_gvsp_gendc_container_header_variable_fields,
+        &ett_gvsp_gendc_container_header_component_offsets,
         &ett_gvsp_gendc_component_header,
         &ett_gvsp_gendc_component_header_flags,
+        &ett_gvsp_gendc_part_offsets,
         &ett_gvsp_gendc_part_header
     };
 
